@@ -78,13 +78,25 @@
       padding: 0.5rem;
       cursor: pointer;
       color: var(--text-primary);
-      font-size: 1.25rem;
       line-height: 1;
       transition: border-color 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .theme-toggle:hover {
       border-color: var(--accent-color);
+    }
+
+    .theme-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .theme-icon svg {
+      display: block;
     }
 
     .mode-toggle {
