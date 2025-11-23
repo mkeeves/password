@@ -166,7 +166,24 @@
   // Passphrase generation
   // ============================================
   function generatePassphrase(options) {
-    const { words, separator, capitalize, capitalizePosition, addNumber, numberPosition, addSymbol, symbolPosition } = options;
+    const { words } = options;
+
+    // Generate new random words and store them
+    passphraseState.words = [];
+    for (let i = 0; i < words; i++) {
+      passphraseState.words.push(WORDLIST[getRandomInt(WORDLIST.length)]);
+    }
+
+    // Generate number and symbol (will be used if options are enabled)
+    passphraseState.number = getRandomInt(100);
+    const symbols = '!@#$%^&*';
+    passphraseState.symbol = symbols[getRandomInt(symbols.length)];
+
+    return renderPassphrase(options);
+  }
+
+  function renderPassphrase(options) {
+    const { separator, capitalize, capitalizePosition, addNumber, numberPosition, addSymbol, symbolPosition } = options;
 
     // Resolve separator
     let sep;
@@ -176,64 +193,73 @@
       default: sep = separator;
     }
 
-    // Pick random words
-    const chosen = [];
-    for (let i = 0; i < words; i++) {
-      let word = WORDLIST[getRandomInt(WORDLIST.length)];
+    // Apply capitalization to stored words
+    const processedWords = passphraseState.words.map((word, i) => {
       if (capitalize) {
         const shouldCapitalize =
           capitalizePosition === 'all' ||
           (capitalizePosition === 'first' && i === 0) ||
-          (capitalizePosition === 'last' && i === words - 1);
+          (capitalizePosition === 'last' && i === passphraseState.words.length - 1);
         if (shouldCapitalize) {
-          word = word.charAt(0).toUpperCase() + word.slice(1);
+          return word.charAt(0).toUpperCase() + word.slice(1);
         }
       }
-      chosen.push(word);
-    }
+      return word;
+    });
 
-    let result = chosen.join(sep);
+    let result = processedWords.join(sep);
 
-    // Generate extras
-    const number = addNumber ? String(getRandomInt(100)) : '';
-    const symbols = '!@#$%^&*';
-    const symbol = addSymbol ? symbols[getRandomInt(symbols.length)] : '';
-
-    // Determine positions
+    // Add extras based on options
     let prefix = '';
     let suffix = '';
 
-    if (addNumber) {
+    if (addNumber && passphraseState.number !== null) {
+      const num = String(passphraseState.number);
       if (numberPosition === 'start') {
-        prefix += number;
+        prefix += num;
       } else if (numberPosition === 'end') {
-        suffix += number;
+        suffix += num;
       } else {
-        // random
-        if (getRandomInt(2) === 0) {
-          prefix += number;
-        } else {
-          suffix += number;
-        }
+        // For random, we need consistent placement - use stored position or default to end
+        suffix += num;
       }
     }
 
-    if (addSymbol) {
+    if (addSymbol && passphraseState.symbol !== null) {
       if (symbolPosition === 'start') {
-        prefix += symbol;
+        prefix += passphraseState.symbol;
       } else if (symbolPosition === 'end') {
-        suffix += symbol;
+        suffix += passphraseState.symbol;
       } else {
-        // random
-        if (getRandomInt(2) === 0) {
-          prefix += symbol;
-        } else {
-          suffix += symbol;
-        }
+        // For random, default to end for consistency when toggling
+        suffix += passphraseState.symbol;
       }
     }
 
     return prefix + result + suffix;
+  }
+
+  function updatePassphraseDisplay() {
+    if (passphraseState.words.length === 0) return;
+
+    const options = getPassphraseOptions();
+
+    // Handle word count changes
+    while (passphraseState.words.length < options.words) {
+      passphraseState.words.push(WORDLIST[getRandomInt(WORDLIST.length)]);
+    }
+    if (passphraseState.words.length > options.words) {
+      passphraseState.words = passphraseState.words.slice(0, options.words);
+    }
+
+    const result = renderPassphrase(options);
+    const output = document.getElementById('output');
+    output.textContent = result;
+
+    const strength = estimatePassphraseStrength(options.words);
+    showFeedback(`Strength: ${strength.label}`);
+    updateStrengthBar(strength.level);
+    updateUrl();
   }
 
   // ============================================
@@ -303,6 +329,13 @@
   // ============================================
   let currentMode = 'password';
   let feedbackTimeout = null;
+
+  // Store passphrase components for live updates
+  let passphraseState = {
+    words: [],      // Raw words (lowercase)
+    number: null,   // Generated number (0-99)
+    symbol: null    // Generated symbol
+  };
 
   function getPasswordOptions() {
     return {
@@ -561,16 +594,27 @@
     document.getElementById('useSimpleSymbols').addEventListener('change', generate);
     document.getElementById('useAllSymbols').addEventListener('change', generate);
 
-    // Passphrase extras - enable/disable position dropdowns
+    // Passphrase options - enable/disable dropdowns and update display
+    document.getElementById('words').addEventListener('input', updatePassphraseDisplay);
+    document.getElementById('separator').addEventListener('change', updatePassphraseDisplay);
+
     document.getElementById('passphraseCapitalize').addEventListener('change', function() {
       document.getElementById('capitalizePosition').disabled = !this.checked;
+      updatePassphraseDisplay();
     });
+    document.getElementById('capitalizePosition').addEventListener('change', updatePassphraseDisplay);
+
     document.getElementById('passphraseNumbers').addEventListener('change', function() {
       document.getElementById('numberPosition').disabled = !this.checked;
+      updatePassphraseDisplay();
     });
+    document.getElementById('numberPosition').addEventListener('change', updatePassphraseDisplay);
+
     document.getElementById('passphraseSymbols').addEventListener('change', function() {
       document.getElementById('symbolPosition').disabled = !this.checked;
+      updatePassphraseDisplay();
     });
+    document.getElementById('symbolPosition').addEventListener('change', updatePassphraseDisplay);
 
     // Update strength when user manually edits the output
     document.getElementById('output').addEventListener('input', function() {
