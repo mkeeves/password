@@ -69,27 +69,35 @@
     }
 
     .theme-dropdown {
-      position: absolute;
-      top: 1rem;
-      right: 1rem;
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+      z-index: 1000;
     }
 
     .theme-toggle {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(0, 0, 0, 0.1);
       border-radius: 50%;
-      width: 40px;
-      height: 40px;
+      width: 48px;
+      height: 48px;
       cursor: pointer;
       color: var(--text-primary);
-      transition: border-color 0.2s, background-color 0.2s;
+      transition: transform 0.2s, box-shadow 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    [data-theme="dark"] .theme-toggle {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.2);
     }
 
     .theme-toggle:hover {
-      border-color: var(--accent-color);
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
     .theme-icon {
@@ -104,19 +112,23 @@
 
     .theme-menu {
       position: absolute;
-      top: calc(100% + 8px);
-      right: 0;
-      background: var(--bg-card);
+      bottom: 56px;
+      left: 0;
+      background: rgba(255, 255, 255, 0.95);
       border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 6px;
+      border-radius: 8px;
+      padding: 4px;
       min-width: 140px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       opacity: 0;
       visibility: hidden;
-      transform: translateY(-8px);
+      transform: translateY(8px);
       transition: opacity 0.2s, transform 0.2s, visibility 0.2s;
       z-index: 100;
+    }
+
+    [data-theme="dark"] .theme-menu {
+      background: rgba(31, 41, 55, 0.95);
     }
 
     .theme-menu.open {
@@ -130,23 +142,32 @@
       align-items: center;
       gap: 10px;
       width: 100%;
-      padding: 10px 12px;
+      padding: 8px 12px;
       border: none;
       background: transparent;
       color: var(--text-primary);
       font-size: 0.875rem;
       cursor: pointer;
-      border-radius: 8px;
+      border-radius: 6px;
       transition: background-color 0.15s;
     }
 
     .theme-option:hover {
-      background: var(--bg-secondary);
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    [data-theme="dark"] .theme-option:hover {
+      background: rgba(255, 255, 255, 0.1);
     }
 
     .theme-option.active {
-      background: var(--accent-color);
-      color: #ffffff;
+      background: rgba(59, 130, 246, 0.1);
+      color: #2563eb;
+    }
+
+    [data-theme="dark"] .theme-option.active {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
     }
 
     .theme-option svg {
@@ -307,6 +328,15 @@
       word-break: break-all;
       min-height: 1.75rem;
       color: var(--text-primary);
+      outline: none;
+      padding: 0.5rem;
+      margin: -0.5rem;
+      border-radius: 6px;
+      transition: background-color 0.15s;
+    }
+
+    .output-value:focus {
+      background-color: var(--bg-primary);
     }
 
     .output-value:empty::before {
@@ -314,11 +344,14 @@
       color: var(--text-secondary);
     }
 
+    .strength-container {
+      margin-top: 0.75rem;
+    }
+
     .feedback {
       font-size: 0.8125rem;
-      margin-top: 0.75rem;
       color: var(--text-secondary);
-      min-height: 1.25rem;
+      margin-bottom: 0.5rem;
     }
 
     .feedback.success {
@@ -327,6 +360,35 @@
 
     .feedback.error {
       color: var(--error-color);
+    }
+
+    .strength-bar {
+      height: 4px;
+      background-color: var(--border-color);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .strength-bar-fill {
+      height: 100%;
+      width: 0;
+      border-radius: 2px;
+      transition: width 0.3s, background-color 0.3s;
+    }
+
+    .strength-bar-fill.weak {
+      width: 33%;
+      background-color: var(--error-color);
+    }
+
+    .strength-bar-fill.okay {
+      width: 66%;
+      background-color: #f0ad4e;
+    }
+
+    .strength-bar-fill.strong {
+      width: 100%;
+      background-color: var(--success-color);
     }
 
     .bare-mode .container {
@@ -341,7 +403,7 @@
     .bare-mode .mode-toggle,
     .bare-mode .options-card,
     .bare-mode .actions,
-    .bare-mode .feedback,
+    .bare-mode .strength-container,
     .bare-mode .theme-dropdown {
       display: none !important;
     }
@@ -462,8 +524,13 @@
     </div>
 
     <div class="output-card">
-      <div class="output-value" id="output"></div>
-      <div class="feedback" id="feedback"></div>
+      <div class="output-value" id="output" contenteditable="true" spellcheck="false"></div>
+      <div class="strength-container">
+        <div class="feedback" id="feedback"></div>
+        <div class="strength-bar">
+          <div class="strength-bar-fill" id="strengthBar"></div>
+        </div>
+      </div>
     </div>
   </div>
 

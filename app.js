@@ -267,14 +267,17 @@
 
   function setMode(mode) {
     currentMode = mode;
-    
+
     // Update toggle buttons
     document.getElementById('modePassword').classList.toggle('active', mode === 'password');
     document.getElementById('modePassphrase').classList.toggle('active', mode === 'passphrase');
-    
+
     // Show/hide options
     document.getElementById('passwordOptions').classList.toggle('active', mode === 'password');
     document.getElementById('passphraseOptions').classList.toggle('active', mode === 'passphrase');
+
+    // Auto-generate when switching modes
+    generate();
   }
 
   function showFeedback(message, type = '') {
@@ -288,12 +291,20 @@
     }
   }
 
+  function updateStrengthBar(level) {
+    const bar = document.getElementById('strengthBar');
+    bar.className = 'strength-bar-fill';
+    if (level) {
+      bar.classList.add(level);
+    }
+  }
+
   function generate() {
     const output = document.getElementById('output');
-    
+
     try {
       let result, strength;
-      
+
       if (currentMode === 'password') {
         const options = getPasswordOptions();
         result = generatePassword(options);
@@ -303,12 +314,14 @@
         result = generatePassphrase(options);
         strength = estimatePassphraseStrength(options.words);
       }
-      
+
       output.textContent = result;
       showFeedback(`Strength: ${strength.label}`);
+      updateStrengthBar(strength.level);
     } catch (err) {
       output.textContent = '';
       showFeedback(err.message, 'error');
+      updateStrengthBar(null);
     }
   }
 
@@ -407,6 +420,19 @@
     document.getElementById('modePassphrase').addEventListener('click', () => setMode('passphrase'));
     document.getElementById('generateBtn').addEventListener('click', generate);
     document.getElementById('copyBtn').addEventListener('click', copyToClipboard);
+
+    // Update strength when user manually edits the output
+    document.getElementById('output').addEventListener('input', function() {
+      const value = this.textContent.trim();
+      if (value) {
+        const strength = estimatePasswordStrength(value);
+        showFeedback(`Strength: ${strength.label}`);
+        updateStrengthBar(strength.level);
+      } else {
+        showFeedback('');
+        updateStrengthBar(null);
+      }
+    });
 
     // Handle allSymbols overriding simpleSymbols
     document.getElementById('useAllSymbols').addEventListener('change', function() {
