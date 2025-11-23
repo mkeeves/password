@@ -291,6 +291,15 @@
       cursor: not-allowed;
     }
 
+    .extra-selects {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .extra-selects .extra-select {
+      min-width: 100px;
+    }
+
     .checkbox-label input[type="checkbox"] {
       width: 1rem;
       height: 1rem;
@@ -631,22 +640,38 @@
               <input type="checkbox" id="passphraseNumbers">
               <span>Add number</span>
             </label>
-            <select id="numberPosition" class="extra-select" disabled>
-              <option value="random" selected>Random</option>
-              <option value="start">Start</option>
-              <option value="end">End</option>
-            </select>
+            <div class="extra-selects">
+              <select id="numberPosition" class="extra-select" disabled>
+                <option value="random" selected>Random</option>
+                <option value="start">Start of</option>
+                <option value="end">End of</option>
+              </select>
+              <select id="numberWord" class="extra-select" disabled>
+                <option value="random" selected>Random word</option>
+                <option value="first">First word</option>
+                <option value="last">Last word</option>
+                <option value="all">All words</option>
+              </select>
+            </div>
           </div>
           <div class="extra-option">
             <label class="checkbox-label">
               <input type="checkbox" id="passphraseSymbols">
               <span>Add symbol</span>
             </label>
-            <select id="symbolPosition" class="extra-select" disabled>
-              <option value="random" selected>Random</option>
-              <option value="start">Start</option>
-              <option value="end">End</option>
-            </select>
+            <div class="extra-selects">
+              <select id="symbolPosition" class="extra-select" disabled>
+                <option value="random" selected>Random</option>
+                <option value="start">Start of</option>
+                <option value="end">End of</option>
+              </select>
+              <select id="symbolWord" class="extra-select" disabled>
+                <option value="random" selected>Random word</option>
+                <option value="first">First word</option>
+                <option value="last">Last word</option>
+                <option value="all">All words</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>

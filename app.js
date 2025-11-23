@@ -183,7 +183,7 @@
   }
 
   function renderPassphrase(options) {
-    const { separator, capitalize, capitalizePosition, addNumber, numberPosition, addSymbol, symbolPosition } = options;
+    const { separator, capitalize, capitalizePosition, addNumber, numberPosition, numberWord, addSymbol, symbolPosition, symbolWord } = options;
 
     // Resolve separator
     let sep;
@@ -207,36 +207,64 @@
       return word;
     });
 
-    let result = processedWords.join(sep);
+    // Helper to add extra to word(s)
+    function addExtraToWords(words, extra, position, wordSelection) {
+      if (position === 'random') {
+        // Random: add to end of entire passphrase (handled separately)
+        return { words, prefix: '', suffix: extra };
+      }
 
-    // Add extras based on options
+      const result = [...words];
+      let indices = [];
+
+      if (wordSelection === 'first') {
+        indices = [0];
+      } else if (wordSelection === 'last') {
+        indices = [words.length - 1];
+      } else if (wordSelection === 'all') {
+        indices = words.map((_, i) => i);
+      } else {
+        // random word - pick one
+        indices = [getRandomInt(words.length)];
+      }
+
+      for (const i of indices) {
+        if (position === 'start') {
+          result[i] = extra + result[i];
+        } else {
+          result[i] = result[i] + extra;
+        }
+      }
+
+      return { words: result, prefix: '', suffix: '' };
+    }
+
+    let finalWords = [...processedWords];
     let prefix = '';
     let suffix = '';
 
+    // Add number
     if (addNumber && passphraseState.number !== null) {
       const num = String(passphraseState.number);
-      if (numberPosition === 'start') {
-        prefix += num;
-      } else if (numberPosition === 'end') {
+      if (numberPosition === 'random') {
         suffix += num;
       } else {
-        // For random, we need consistent placement - use stored position or default to end
-        suffix += num;
+        const result = addExtraToWords(finalWords, num, numberPosition, numberWord);
+        finalWords = result.words;
       }
     }
 
+    // Add symbol
     if (addSymbol && passphraseState.symbol !== null) {
-      if (symbolPosition === 'start') {
-        prefix += passphraseState.symbol;
-      } else if (symbolPosition === 'end') {
+      if (symbolPosition === 'random') {
         suffix += passphraseState.symbol;
       } else {
-        // For random, default to end for consistency when toggling
-        suffix += passphraseState.symbol;
+        const result = addExtraToWords(finalWords, passphraseState.symbol, symbolPosition, symbolWord);
+        finalWords = result.words;
       }
     }
 
-    return prefix + result + suffix;
+    return prefix + finalWords.join(sep) + suffix;
   }
 
   function updatePassphraseDisplay() {
@@ -319,8 +347,10 @@
       capitalizePos: params.get('capitalizePos') || 'all',
       addNumber: parseBoolean(params.get('addNumber'), false),
       numberPos: params.get('numberPos') || 'random',
+      numberWord: params.get('numberWord') || 'random',
       addSymbol: parseBoolean(params.get('addSymbol'), false),
-      symbolPos: params.get('symbolPos') || 'random'
+      symbolPos: params.get('symbolPos') || 'random',
+      symbolWord: params.get('symbolWord') || 'random'
     };
   }
 
@@ -356,8 +386,10 @@
       capitalizePosition: document.getElementById('capitalizePosition').value,
       addNumber: document.getElementById('passphraseNumbers').checked,
       numberPosition: document.getElementById('numberPosition').value,
+      numberWord: document.getElementById('numberWord').value,
       addSymbol: document.getElementById('passphraseSymbols').checked,
-      symbolPosition: document.getElementById('symbolPosition').value
+      symbolPosition: document.getElementById('symbolPosition').value,
+      symbolWord: document.getElementById('symbolWord').value
     };
   }
 
@@ -423,9 +455,15 @@
       params.set('capitalize', opts.capitalize ? '1' : '0');
       if (opts.capitalize) params.set('capitalizePos', opts.capitalizePosition);
       params.set('addNumber', opts.addNumber ? '1' : '0');
-      if (opts.addNumber) params.set('numberPos', opts.numberPosition);
+      if (opts.addNumber) {
+        params.set('numberPos', opts.numberPosition);
+        if (opts.numberPosition !== 'random') params.set('numberWord', opts.numberWord);
+      }
       params.set('addSymbol', opts.addSymbol ? '1' : '0');
-      if (opts.addSymbol) params.set('symbolPos', opts.symbolPosition);
+      if (opts.addSymbol) {
+        params.set('symbolPos', opts.symbolPosition);
+        if (opts.symbolPosition !== 'random') params.set('symbolWord', opts.symbolWord);
+      }
     }
 
     const newUrl = window.location.pathname + '?' + params.toString();
@@ -539,9 +577,13 @@
     document.getElementById('passphraseNumbers').checked = params.addNumber;
     document.getElementById('numberPosition').value = params.numberPos;
     document.getElementById('numberPosition').disabled = !params.addNumber;
+    document.getElementById('numberWord').value = params.numberWord;
+    document.getElementById('numberWord').disabled = !params.addNumber || params.numberPos === 'random';
     document.getElementById('passphraseSymbols').checked = params.addSymbol;
     document.getElementById('symbolPosition').value = params.symbolPos;
     document.getElementById('symbolPosition').disabled = !params.addSymbol;
+    document.getElementById('symbolWord').value = params.symbolWord;
+    document.getElementById('symbolWord').disabled = !params.addSymbol || params.symbolPos === 'random';
 
     // Always generate on load (setMode already generates, but options may have changed)
     generate();
@@ -605,16 +647,30 @@
     document.getElementById('capitalizePosition').addEventListener('change', updatePassphraseDisplay);
 
     document.getElementById('passphraseNumbers').addEventListener('change', function() {
-      document.getElementById('numberPosition').disabled = !this.checked;
+      const enabled = this.checked;
+      document.getElementById('numberPosition').disabled = !enabled;
+      const pos = document.getElementById('numberPosition').value;
+      document.getElementById('numberWord').disabled = !enabled || pos === 'random';
       updatePassphraseDisplay();
     });
-    document.getElementById('numberPosition').addEventListener('change', updatePassphraseDisplay);
+    document.getElementById('numberPosition').addEventListener('change', function() {
+      document.getElementById('numberWord').disabled = this.value === 'random';
+      updatePassphraseDisplay();
+    });
+    document.getElementById('numberWord').addEventListener('change', updatePassphraseDisplay);
 
     document.getElementById('passphraseSymbols').addEventListener('change', function() {
-      document.getElementById('symbolPosition').disabled = !this.checked;
+      const enabled = this.checked;
+      document.getElementById('symbolPosition').disabled = !enabled;
+      const pos = document.getElementById('symbolPosition').value;
+      document.getElementById('symbolWord').disabled = !enabled || pos === 'random';
       updatePassphraseDisplay();
     });
-    document.getElementById('symbolPosition').addEventListener('change', updatePassphraseDisplay);
+    document.getElementById('symbolPosition').addEventListener('change', function() {
+      document.getElementById('symbolWord').disabled = this.value === 'random';
+      updatePassphraseDisplay();
+    });
+    document.getElementById('symbolWord').addEventListener('change', updatePassphraseDisplay);
 
     // Update strength when user manually edits the output
     document.getElementById('output').addEventListener('input', function() {
