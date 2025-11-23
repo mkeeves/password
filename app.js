@@ -404,16 +404,8 @@
     document.getElementById('passwordOptions').classList.toggle('active', mode === 'password');
     document.getElementById('passphraseOptions').classList.toggle('active', mode === 'passphrase');
 
-    // Auto-generate for password mode, clear output for passphrase mode
-    if (mode === 'password') {
-      generate();
-    } else {
-      // Clear output and reset strength for passphrase mode
-      document.getElementById('output').textContent = '';
-      showFeedback('');
-      updateStrengthBar(null);
-      updateUrl();
-    }
+    // Auto-generate when switching modes
+    generate();
   }
 
   function showFeedback(message, type = '') {
@@ -646,28 +638,36 @@
     });
     document.getElementById('capitalizePosition').addEventListener('change', updatePassphraseDisplay);
 
-    document.getElementById('passphraseNumbers').addEventListener('change', function() {
-      const enabled = this.checked;
-      document.getElementById('numberPosition').disabled = !enabled;
+    function updateNumberDropdowns() {
+      const checked = document.getElementById('passphraseNumbers').checked;
       const pos = document.getElementById('numberPosition').value;
-      document.getElementById('numberWord').disabled = !enabled || pos === 'random';
+      document.getElementById('numberPosition').disabled = !checked;
+      document.getElementById('numberWord').disabled = !checked || pos === 'random';
+    }
+
+    function updateSymbolDropdowns() {
+      const checked = document.getElementById('passphraseSymbols').checked;
+      const pos = document.getElementById('symbolPosition').value;
+      document.getElementById('symbolPosition').disabled = !checked;
+      document.getElementById('symbolWord').disabled = !checked || pos === 'random';
+    }
+
+    document.getElementById('passphraseNumbers').addEventListener('change', function() {
+      updateNumberDropdowns();
       updatePassphraseDisplay();
     });
     document.getElementById('numberPosition').addEventListener('change', function() {
-      document.getElementById('numberWord').disabled = this.value === 'random';
+      updateNumberDropdowns();
       updatePassphraseDisplay();
     });
     document.getElementById('numberWord').addEventListener('change', updatePassphraseDisplay);
 
     document.getElementById('passphraseSymbols').addEventListener('change', function() {
-      const enabled = this.checked;
-      document.getElementById('symbolPosition').disabled = !enabled;
-      const pos = document.getElementById('symbolPosition').value;
-      document.getElementById('symbolWord').disabled = !enabled || pos === 'random';
+      updateSymbolDropdowns();
       updatePassphraseDisplay();
     });
     document.getElementById('symbolPosition').addEventListener('change', function() {
-      document.getElementById('symbolWord').disabled = this.value === 'random';
+      updateSymbolDropdowns();
       updatePassphraseDisplay();
     });
     document.getElementById('symbolWord').addEventListener('change', updatePassphraseDisplay);
