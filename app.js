@@ -113,7 +113,7 @@
   // Password generation
   // ============================================
   function generatePassword(options) {
-    const { length, useLower, useUpper, useNumbers, useSimpleSymbols, useAllSymbols } = options;
+    const { length, useLower, useUpper, useNumbers, useSimpleSymbols, useAllSymbols, capitalize } = options;
 
     // Build character pool
     let pool = '';
@@ -159,14 +159,21 @@
     }
 
     // Shuffle to randomize positions
-    return shuffle(passwordChars).join('');
+    let result = shuffle(passwordChars).join('');
+
+    // Capitalize first letter if requested
+    if (capitalize && result.length > 0) {
+      result = result.charAt(0).toUpperCase() + result.slice(1);
+    }
+
+    return result;
   }
 
   // ============================================
   // Passphrase generation
   // ============================================
   function generatePassphrase(options) {
-    const { words, separator, addNumber, addSymbol } = options;
+    const { words, separator, capitalize, addNumber, addSymbol } = options;
 
     // Resolve separator
     let sep;
@@ -179,7 +186,11 @@
     // Pick random words
     const chosen = [];
     for (let i = 0; i < words; i++) {
-      chosen.push(WORDLIST[getRandomInt(WORDLIST.length)]);
+      let word = WORDLIST[getRandomInt(WORDLIST.length)];
+      if (capitalize) {
+        word = word.charAt(0).toUpperCase() + word.slice(1);
+      }
+      chosen.push(word);
     }
 
     let result = chosen.join(sep);
@@ -234,7 +245,7 @@
 
   function getUrlParams() {
     const params = new URLSearchParams(window.location.search);
-    
+
     return {
       mode: params.get('mode') || 'password',
       auto: parseBoolean(params.get('auto'), true),
@@ -246,9 +257,13 @@
       numbers: parseBoolean(params.get('numbers'), true),
       simpleSymbols: parseBoolean(params.get('simpleSymbols'), true),
       allSymbols: parseBoolean(params.get('allSymbols'), false),
+      passwordCapitalize: parseBoolean(params.get('capitalize'), false),
       // Passphrase options
       words: clamp(parseInt(params.get('words')) || 3, 1, 12),
-      sep: params.get('sep') || '-'
+      sep: params.get('sep') || '-',
+      passphraseCapitalize: parseBoolean(params.get('capitalize'), false),
+      addNumber: parseBoolean(params.get('addNumber'), false),
+      addSymbol: parseBoolean(params.get('addSymbol'), false)
     };
   }
 
@@ -265,7 +280,8 @@
       useUpper: document.getElementById('useUpper').checked,
       useNumbers: document.getElementById('useNumbers').checked,
       useSimpleSymbols: document.getElementById('useSimpleSymbols').checked,
-      useAllSymbols: document.getElementById('useAllSymbols').checked
+      useAllSymbols: document.getElementById('useAllSymbols').checked,
+      capitalize: document.getElementById('passwordCapitalize').checked
     };
   }
 
@@ -273,6 +289,7 @@
     return {
       words: clamp(parseInt(document.getElementById('words').value) || 3, 1, 12),
       separator: document.getElementById('separator').value,
+      capitalize: document.getElementById('passphraseCapitalize').checked,
       addNumber: document.getElementById('passphraseNumbers').checked,
       addSymbol: document.getElementById('passphraseSymbols').checked
     };
@@ -312,6 +329,33 @@
     }
   }
 
+  function updateUrl() {
+    const params = new URLSearchParams();
+
+    params.set('mode', currentMode);
+
+    if (currentMode === 'password') {
+      const opts = getPasswordOptions();
+      params.set('length', opts.length);
+      params.set('lower', opts.useLower ? '1' : '0');
+      params.set('upper', opts.useUpper ? '1' : '0');
+      params.set('numbers', opts.useNumbers ? '1' : '0');
+      params.set('simpleSymbols', opts.useSimpleSymbols ? '1' : '0');
+      params.set('allSymbols', opts.useAllSymbols ? '1' : '0');
+      params.set('capitalize', opts.capitalize ? '1' : '0');
+    } else {
+      const opts = getPassphraseOptions();
+      params.set('words', opts.words);
+      params.set('sep', opts.separator);
+      params.set('capitalize', opts.capitalize ? '1' : '0');
+      params.set('addNumber', opts.addNumber ? '1' : '0');
+      params.set('addSymbol', opts.addSymbol ? '1' : '0');
+    }
+
+    const newUrl = window.location.pathname + '?' + params.toString();
+    window.history.replaceState({}, '', newUrl);
+  }
+
   function generate() {
     const output = document.getElementById('output');
 
@@ -331,6 +375,7 @@
       output.textContent = result;
       showFeedback(`Strength: ${strength.label}`);
       updateStrengthBar(strength.level);
+      updateUrl();
     } catch (err) {
       output.textContent = '';
       showFeedback(err.message, 'error');
@@ -379,7 +424,8 @@
     document.getElementById('useNumbers').checked = params.numbers;
     document.getElementById('useSimpleSymbols').checked = params.simpleSymbols && !params.allSymbols;
     document.getElementById('useAllSymbols').checked = params.allSymbols;
-    
+    document.getElementById('passwordCapitalize').checked = params.passwordCapitalize;
+
     // Apply passphrase options
     document.getElementById('words').value = params.words;
     const sepSelect = document.getElementById('separator');
@@ -389,7 +435,10 @@
         break;
       }
     }
-    
+    document.getElementById('passphraseCapitalize').checked = params.passphraseCapitalize;
+    document.getElementById('passphraseNumbers').checked = params.addNumber;
+    document.getElementById('passphraseSymbols').checked = params.addSymbol;
+
     // Always generate on load (setMode already generates, but options may have changed)
     generate();
   }
@@ -438,10 +487,12 @@
     document.getElementById('useNumbers').addEventListener('change', generate);
     document.getElementById('useSimpleSymbols').addEventListener('change', generate);
     document.getElementById('useAllSymbols').addEventListener('change', generate);
+    document.getElementById('passwordCapitalize').addEventListener('change', generate);
 
     // Auto-generate when passphrase options change
     document.getElementById('words').addEventListener('input', generate);
     document.getElementById('separator').addEventListener('change', generate);
+    document.getElementById('passphraseCapitalize').addEventListener('change', generate);
     document.getElementById('passphraseNumbers').addEventListener('change', generate);
     document.getElementById('passphraseSymbols').addEventListener('change', generate);
 
