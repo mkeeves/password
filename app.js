@@ -339,9 +339,15 @@
     document.getElementById('passwordOptions').classList.toggle('active', mode === 'password');
     document.getElementById('passphraseOptions').classList.toggle('active', mode === 'passphrase');
 
-    // Auto-generate only for password mode
+    // Auto-generate for password mode, clear output for passphrase mode
     if (mode === 'password') {
       generate();
+    } else {
+      // Clear output and reset strength for passphrase mode
+      document.getElementById('output').textContent = '';
+      showFeedback('');
+      updateStrengthBar(null);
+      updateUrl();
     }
   }
 
