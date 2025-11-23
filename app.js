@@ -697,6 +697,10 @@
       }
     });
 
+    // Initialize dropdown states
+    updateNumberDropdowns();
+    updateSymbolDropdowns();
+
     // Apply URL params and auto-generate if needed
     applyUrlParams();
   }
