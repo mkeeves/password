@@ -166,8 +166,8 @@
   // Passphrase generation
   // ============================================
   function generatePassphrase(options) {
-    const { words, separator } = options;
-    
+    const { words, separator, addNumber, addSymbol } = options;
+
     // Resolve separator
     let sep;
     switch (separator) {
@@ -182,7 +182,18 @@
       chosen.push(WORDLIST[getRandomInt(WORDLIST.length)]);
     }
 
-    return chosen.join(sep);
+    let result = chosen.join(sep);
+
+    // Add extras
+    if (addNumber) {
+      result += getRandomInt(100);
+    }
+    if (addSymbol) {
+      const symbols = '!@#$%^&*';
+      result += symbols[getRandomInt(symbols.length)];
+    }
+
+    return result;
   }
 
   // ============================================
@@ -261,7 +272,9 @@
   function getPassphraseOptions() {
     return {
       words: clamp(parseInt(document.getElementById('words').value) || 3, 1, 12),
-      separator: document.getElementById('separator').value
+      separator: document.getElementById('separator').value,
+      addNumber: document.getElementById('passphraseNumbers').checked,
+      addSymbol: document.getElementById('passphraseSymbols').checked
     };
   }
 
@@ -377,10 +390,8 @@
       }
     }
     
-    // Auto-generate
-    if (params.auto) {
-      generate();
-    }
+    // Always generate on load (setMode already generates, but options may have changed)
+    generate();
   }
 
   // ============================================
@@ -418,8 +429,21 @@
 
     document.getElementById('modePassword').addEventListener('click', () => setMode('password'));
     document.getElementById('modePassphrase').addEventListener('click', () => setMode('passphrase'));
-    document.getElementById('generateBtn').addEventListener('click', generate);
     document.getElementById('copyBtn').addEventListener('click', copyToClipboard);
+
+    // Auto-generate when password options change
+    document.getElementById('length').addEventListener('input', generate);
+    document.getElementById('useLower').addEventListener('change', generate);
+    document.getElementById('useUpper').addEventListener('change', generate);
+    document.getElementById('useNumbers').addEventListener('change', generate);
+    document.getElementById('useSimpleSymbols').addEventListener('change', generate);
+    document.getElementById('useAllSymbols').addEventListener('change', generate);
+
+    // Auto-generate when passphrase options change
+    document.getElementById('words').addEventListener('input', generate);
+    document.getElementById('separator').addEventListener('change', generate);
+    document.getElementById('passphraseNumbers').addEventListener('change', generate);
+    document.getElementById('passphraseSymbols').addEventListener('change', generate);
 
     // Update strength when user manually edits the output
     document.getElementById('output').addEventListener('input', function() {
