@@ -42,30 +42,52 @@
   // ============================================
   // Theme management
   // ============================================
-  function getPreferredTheme() {
-    const saved = getCookie('mkeeves-theme');
-    if (saved) return saved;
+  function getSystemTheme() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
 
-  function setTheme(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    setCookie('mkeeves-theme', theme, 365);
-    updateThemeIcon(theme);
+  function getThemePreference() {
+    return getCookie('mkeeves-theme-pref') || 'auto';
   }
 
-  function updateThemeIcon(theme) {
+  function getEffectiveTheme(preference) {
+    if (preference === 'auto') {
+      return getSystemTheme();
+    }
+    return preference;
+  }
+
+  function setTheme(preference) {
+    const effective = getEffectiveTheme(preference);
+    document.documentElement.setAttribute('data-theme', effective);
+    setCookie('mkeeves-theme-pref', preference, 365);
+    updateThemeIcon(effective);
+    updateActiveOption(preference);
+  }
+
+  function updateThemeIcon(effectiveTheme) {
     const icon = document.querySelector('.theme-icon');
     if (icon) {
-      icon.innerHTML = theme === 'dark'
-        ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
-        : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+      icon.innerHTML = effectiveTheme === 'dark'
+        ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+        : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';
     }
   }
 
-  function toggleTheme() {
-    const current = document.documentElement.getAttribute('data-theme') || 'light';
-    setTheme(current === 'dark' ? 'light' : 'dark');
+  function updateActiveOption(preference) {
+    document.querySelectorAll('.theme-option').forEach(opt => {
+      opt.classList.toggle('active', opt.dataset.theme === preference);
+    });
+  }
+
+  function toggleThemeMenu() {
+    const menu = document.getElementById('themeMenu');
+    menu.classList.toggle('open');
+  }
+
+  function closeThemeMenu() {
+    const menu = document.getElementById('themeMenu');
+    menu.classList.remove('open');
   }
 
   // ============================================
@@ -353,15 +375,39 @@
   // ============================================
   function init() {
     // Apply theme
-    setTheme(getPreferredTheme());
-    
+    setTheme(getThemePreference());
+
+    // Listen for system theme changes (for auto mode)
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+      const pref = getThemePreference();
+      if (pref === 'auto') {
+        setTheme('auto');
+      }
+    });
+
     // Event listeners
-    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+    document.getElementById('themeToggle').addEventListener('click', toggleThemeMenu);
+
+    // Theme menu options
+    document.querySelectorAll('.theme-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        setTheme(opt.dataset.theme);
+        closeThemeMenu();
+      });
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.theme-dropdown')) {
+        closeThemeMenu();
+      }
+    });
+
     document.getElementById('modePassword').addEventListener('click', () => setMode('password'));
     document.getElementById('modePassphrase').addEventListener('click', () => setMode('passphrase'));
     document.getElementById('generateBtn').addEventListener('click', generate);
     document.getElementById('copyBtn').addEventListener('click', copyToClipboard);
-    
+
     // Handle allSymbols overriding simpleSymbols
     document.getElementById('useAllSymbols').addEventListener('change', function() {
       if (this.checked) {
@@ -373,7 +419,7 @@
         document.getElementById('useAllSymbols').checked = false;
       }
     });
-    
+
     // Apply URL params and auto-generate if needed
     applyUrlParams();
   }
