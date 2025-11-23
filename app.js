@@ -285,32 +285,57 @@
     output.textContent = result;
 
     const strength = estimatePassphraseStrength(options.words);
-    showFeedback(`Strength: ${strength.label}`);
+    showFeedback(`Strength: ${strength.label} (${strength.entropy} bits)`);
     updateStrengthBar(strength.level);
     updateUrl();
   }
 
   // ============================================
-  // Strength estimation
+  // Strength estimation (entropy in bits)
   // ============================================
   function estimatePasswordStrength(password) {
-    let variety = 0;
-    if (/[a-z]/.test(password)) variety++;
-    if (/[A-Z]/.test(password)) variety++;
-    if (/[0-9]/.test(password)) variety++;
-    if (/[^A-Za-z0-9]/.test(password)) variety++;
+    // Calculate charset size based on character types present
+    let charsetSize = 0;
+    if (/[a-z]/.test(password)) charsetSize += 26;
+    if (/[A-Z]/.test(password)) charsetSize += 26;
+    if (/[0-9]/.test(password)) charsetSize += 10;
+    if (/[^A-Za-z0-9]/.test(password)) charsetSize += 32; // Approximate symbol count
 
-    const score = password.length * variety;
+    // Entropy = length × log2(charset_size)
+    const entropy = charsetSize > 0 ? Math.floor(password.length * Math.log2(charsetSize)) : 0;
 
-    if (score < 40) return { label: 'Weak', level: 'weak' };
-    if (score < 80) return { label: 'Okay', level: 'okay' };
-    return { label: 'Strong', level: 'strong' };
+    let label, level;
+    if (entropy < 40) {
+      label = 'Weak';
+      level = 'weak';
+    } else if (entropy < 60) {
+      label = 'Okay';
+      level = 'okay';
+    } else {
+      label = 'Strong';
+      level = 'strong';
+    }
+
+    return { label, level, entropy };
   }
 
   function estimatePassphraseStrength(wordCount) {
-    if (wordCount < 3) return { label: 'Weak (too few words)', level: 'weak' };
-    if (wordCount < 5) return { label: 'Okay', level: 'okay' };
-    return { label: 'Strong', level: 'strong' };
+    // EFF Diceware: 7,776 words = ~12.9 bits per word
+    const entropy = Math.floor(wordCount * 12.9);
+
+    let label, level;
+    if (entropy < 40) {
+      label = 'Weak';
+      level = 'weak';
+    } else if (entropy < 60) {
+      label = 'Okay';
+      level = 'okay';
+    } else {
+      label = 'Strong';
+      level = 'strong';
+    }
+
+    return { label, level, entropy };
   }
 
   // ============================================
@@ -485,7 +510,7 @@
       }
 
       output.textContent = result;
-      showFeedback(`Strength: ${strength.label}`);
+      showFeedback(`Strength: ${strength.label} (${strength.entropy} bits)`);
       updateStrengthBar(strength.level);
       updateUrl();
     } catch (err) {
@@ -677,7 +702,7 @@
       const value = this.textContent.trim();
       if (value) {
         const strength = estimatePasswordStrength(value);
-        showFeedback(`Strength: ${strength.label}`);
+        showFeedback(`Strength: ${strength.label} (${strength.entropy} bits)`);
         updateStrengthBar(strength.level);
       } else {
         showFeedback('');
